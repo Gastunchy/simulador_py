@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Viajes</title>
     <style>
+        /* Diseño general */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f7f7f7;
+            background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -16,59 +17,87 @@
         }
         .container {
             background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
             text-align: center;
+            animation: fadeIn 0.5s ease-in;
         }
+
         h3 {
-            margin-bottom: 30px;
-            font-size: 24px;
+            margin-bottom: 40px;
+            font-size: 28px;
             color: #333;
         }
+
         button {
-            padding: 12px 25px;
+            padding: 15px 30px;
             border: none;
-            border-radius: 6px;
-            background-color: #28a745;
+            border-radius: 8px;
+            background-color: #007bff;
             color: white;
             font-size: 18px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            font-weight: bold;
         }
         button:hover {
-            background-color: #218838;
+            background-color: #0056b3;
         }
+
+        /* Estilos de los estados de los datos */
         #status {
             margin-top: 20px;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: #333;
+            opacity: 0;
+            animation: fadeIn 1s ease-out forwards;
         }
-        .json-container {
+
+        .status-container {
             margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 20px;
-            background-color: #fafafa;
+            background-color: #e9ecef;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-            color: #333;
-            overflow-x: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
-        .json-container pre {
-            background-color: #2d2d2d;
-            color: #fff;
-            padding: 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+
+        .status-container h4 {
             margin: 0;
+            font-size: 18px;
+            color: #343a40;
         }
-        .json-container code {
-            color: #ffd700;
+
+        .status-message {
+            font-size: 18px;
+            font-weight: normal;
+            color: #6c757d;
+        }
+
+        /* Animación de entrada */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Indicador de carga (barra de progreso) */
+        .progress-bar {
+            width: 0%;
+            height: 6px;
+            background-color: #28a745;
+            border-radius: 3px;
+            margin-top: 10px;
+            transition: width 0.5s ease;
         }
     </style>
     <script>
@@ -84,7 +113,7 @@
                 precintos: "1238A, 18239123, FOOBAR"
             };
 
-            // Mostrar los datos del viaje
+            // Mostrar que se está enviando los datos de viaje
             const sendingDataElement = document.getElementById("sendingData");
             sendingDataElement.textContent = "Enviando datos de viaje...";
 
@@ -92,6 +121,11 @@
             const telemetryDataElement = document.getElementById("telemetryData");
             telemetryDataElement.textContent = "Esperando datos de telemetría...";
 
+            // Barra de progreso (simulada)
+            const progressBar = document.getElementById("progressBar");
+            progressBar.style.width = "50%";  // Cargar hasta la mitad
+
+            // Enviar la solicitud de viaje
             fetch('/start_trip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -102,32 +136,22 @@
                 document.getElementById("status").textContent = "Viaje iniciado con éxito.";
                 sendingDataElement.textContent = "Datos de viaje enviados con éxito.";
 
-                // Simulación de telemetría enviada, mostrar ejemplo de telemetría
-                const telemetryMessage = {
-                    uuid: "12345",
-                    msgDateTime: "2025-02-28T18:00:00Z",
-                    messageType: "evento",
-                    deviceID: tripData.dominio,
-                    deviceVendor: "Integra",
-                    deviceType: "emulated",
-                    gps: {
-                        lat: "47.4076",
-                        long: "-8.5531"
-                    },
-                    eventos: [76]
-                };
-
+                // Mostrar que los datos de telemetría también fueron enviados
                 telemetryDataElement.textContent = "Datos de telemetría enviados.";
+                progressBar.style.width = "100%";  // Completado
 
-                // Mostrar los datos de viaje en formato JSON
-                document.getElementById("sendingData").innerHTML = `<pre>${JSON.stringify(tripData, null, 2)}</pre>`;
-
-                // Mostrar los datos de telemetría en formato JSON
-                document.getElementById("telemetryData").innerHTML = `<pre>${JSON.stringify(telemetryMessage, null, 2)}</pre>`;
+                // Después de un tiempo, limpiar los mensajes
+                setTimeout(() => {
+                    document.getElementById("status").textContent = "";
+                    sendingDataElement.textContent = "";
+                    telemetryDataElement.textContent = "";
+                    progressBar.style.width = "0%";  // Reiniciar la barra
+                }, 5000);
             })
             .catch(error => {
                 document.getElementById("status").textContent = "Error al iniciar el viaje.";
                 sendingDataElement.textContent = "Error al enviar los datos de viaje.";
+                progressBar.style.width = "0%";  // Reiniciar si hay error
             });
         }
     </script>
@@ -138,15 +162,18 @@
         <button onclick="startTrip()">Iniciar Viaje</button>
         <p id="status"></p>
 
-        <div class="json-container">
-            <h4>Datos de Viaje Enviados:</h4>
-            <pre id="sendingData"></pre>
+        <div class="status-container">
+            <div>
+                <h4>Viaje:</h4>
+                <p id="sendingData" class="status-message">Esperando datos...</p>
+            </div>
+            <div>
+                <h4>Telemetría:</h4>
+                <p id="telemetryData" class="status-message">Esperando datos...</p>
+            </div>
         </div>
 
-        <div class="json-container">
-            <h4>Datos de Telemetría Enviados:</h4>
-            <pre id="telemetryData"></pre>
-        </div>
+        <div class="progress-bar" id="progressBar"></div>
     </div>
 </body>
 </html>
