@@ -15,7 +15,6 @@
             height: 100vh;
             margin: 0;
             transition: background-color 0.3s, color 0.3s;
-            position: relative;
         }
 
         .container {
@@ -47,7 +46,6 @@
             transition: all 0.3s ease;
             font-weight: bold;
         }
-
         button:hover {
             background-color: #0056b3;
         }
@@ -57,16 +55,13 @@
             background-color: #333;
             color: white;
         }
-
         .dark-mode .container {
             background: #444;
             box-shadow: 0 8px 16px rgba(255, 255, 255, 0.2);
         }
-
         .dark-mode button {
             background-color: #28a745;
         }
-
         .dark-mode button:hover {
             background-color: #218838;
         }
@@ -126,9 +121,7 @@
 
         /* Toggle de modo noche/día */
         #toggleMode {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+            margin-top: 20px;
             padding: 10px 20px;
             font-size: 16px;
             background-color: #f0f2f5;
@@ -137,24 +130,11 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-
         #toggleMode:hover {
             background-color: #ddd;
         }
 
-        /* Estilo para el mapa */
-        #map {
-            height: 400px;
-            width: 100%;
-            margin-top: 20px;
-        }
-
     </style>
-
-    <!-- Incluir Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-
     <script>
         // Función para cambiar entre modo oscuro y modo claro
         function toggleMode() {
@@ -167,7 +147,6 @@
             }
         }
 
-        // Función para iniciar el viaje y actualizar el mapa
         function startTrip() {
             const tripData = {
                 tipoViaje: "ld",
@@ -221,28 +200,8 @@
                 progressBar.style.width = "0%";  // Reiniciar si hay error
             });
         }
-
-        // Función para inicializar el mapa
-        function initMap() {
-            const initialLocation = { lat: 47.4076, lng: -8.5531 }; // Ubicación inicial
-
-            // Crear el mapa centrado en la ubicación inicial
-            const map = L.map('map').setView(initialLocation, 13);
-
-            // Añadir la capa de OpenStreetMap
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            // Añadir un marcador en la ubicación inicial
-            L.marker(initialLocation).addTo(map);
-        }
-
-        // Inicializar el mapa cuando se cargue la página
-        window.onload = initMap;
     </script>
 </head>
-
 <body>
     <div class="container">
         <h3>Simulador de Viajes</h3>
@@ -262,10 +221,7 @@
 
         <div class="progress-bar" id="progressBar"></div>
 
-        <div id="map"></div>  <!-- Aquí se muestra el mapa -->
+        <button id="toggleMode" onclick="toggleMode()">Modo Noche</button>
     </div>
-
-    <!-- Botón de modo oscuro en la parte superior derecha -->
-    <button id="toggleMode" onclick="toggleMode()">Modo Noche</button>
 </body>
 </html>
