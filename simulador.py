@@ -10,7 +10,7 @@ import random
 app = Flask(__name__)
 
 # Configuración de Pub/Sub
-PROJECT_ID = "tu-proyecto"
+PROJECT_ID = "crypto-avatar-452213-k0"
 TOPIC_VIAJE = "viaje-topic"
 TOPIC_TELEMETRIA = "telemetria-topic"
 publisher = pubsub_v1.PublisherClient()
