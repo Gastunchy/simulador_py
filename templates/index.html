@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Viajes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <style>
         /* Diseño general */
         body {
@@ -12,10 +13,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            transition: background-color 0.3s, color 0.3s;
             position: relative;
+            transition: background-color 0.3s, color 0.3s;
+            padding: 20px;
         }
 
         .container {
@@ -31,7 +33,7 @@
         }
 
         h3 {
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             font-size: 28px;
             color: #333;
         }
@@ -47,7 +49,6 @@
             transition: all 0.3s ease;
             font-weight: bold;
         }
-
         button:hover {
             background-color: #0056b3;
         }
@@ -57,18 +58,30 @@
             background-color: #333;
             color: white;
         }
-
         .dark-mode .container {
             background: #444;
             box-shadow: 0 8px 16px rgba(255, 255, 255, 0.2);
         }
-
+        .dark-mode h3, .dark-mode h4 {
+            color: #f8f9fa;
+        }
         .dark-mode button {
             background-color: #28a745;
         }
-
         .dark-mode button:hover {
             background-color: #218838;
+        }
+        .dark-mode .status-container {
+            background-color: #555;
+        }
+        .dark-mode .status-message {
+            color: #dee2e6;
+        }
+        .dark-mode .info-container {
+            background-color: #555;
+        }
+        .dark-mode .info-item span {
+            color: #dee2e6;
         }
 
         /* Estilos de los estados de los datos */
@@ -82,7 +95,7 @@
         }
 
         .status-container {
-            margin-top: 30px;
+            margin-top: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -124,9 +137,9 @@
             transition: width 0.5s ease;
         }
 
-        /* Toggle de modo noche/día */
+        /* Toggle de modo noche/día en la esquina superior derecha */
         #toggleMode {
-            position: absolute;
+            position: fixed;
             top: 20px;
             right: 20px;
             padding: 10px 20px;
@@ -137,7 +150,6 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-
         #toggleMode:hover {
             background-color: #ddd;
         }
@@ -145,108 +157,78 @@
         /* Estilo para el mapa */
         #map {
             height: 400px;
-            width: 100%;
             margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
-    </style>
+        /* Info container para detalles del viaje */
+        .info-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            text-align: left;
+        }
 
-    <!-- Incluir Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+        .info-item {
+            width: 48%;
+            margin-bottom: 10px;
+        }
 
-    <script>
-        // Función para cambiar entre modo oscuro y modo claro
-        function toggleMode() {
-            document.body.classList.toggle('dark-mode');
-            const modeButton = document.getElementById('toggleMode');
-            if (document.body.classList.contains('dark-mode')) {
-                modeButton.textContent = 'Modo Día';
-            } else {
-                modeButton.textContent = 'Modo Noche';
+        .info-item strong {
+            font-weight: bold;
+            color: #343a40;
+        }
+
+        .info-item span {
+            color: #6c757d;
+        }
+
+        /* Estilos para la lista de eventos de telemetría */
+        #telemetryEvents {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0;
+            list-style-type: none;
+        }
+
+        .telemetry-event {
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            text-align: left;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .dark-mode .telemetry-event {
+            background-color: #555;
+            border-left: 4px solid #28a745;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
             }
         }
-
-        // Función para iniciar el viaje y actualizar el mapa
-        function startTrip() {
-            const tripData = {
-                tipoViaje: "ld",
-                idSucursalOrigen: "20241",
-                idSucursalDestino: "20305",
-                hr: "122233",
-                transportista: "12254198",
-                dominio: "AA227DX",
-                dominioSemi: "AA800XM",
-                precintos: "1238A, 18239123, FOOBAR"
-            };
-
-            // Mostrar que se está enviando los datos de viaje
-            const sendingDataElement = document.getElementById("sendingData");
-            sendingDataElement.textContent = "Enviando datos de viaje...";
-
-            // Mostrar en la interfaz que estamos enviando el mensaje de telemetría
-            const telemetryDataElement = document.getElementById("telemetryData");
-            telemetryDataElement.textContent = "Esperando datos de telemetría...";
-
-            // Barra de progreso (simulada)
-            const progressBar = document.getElementById("progressBar");
-            progressBar.style.width = "50%";  // Cargar hasta la mitad
-
-            // Enviar la solicitud de viaje
-            fetch('/start_trip', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(tripData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("status").textContent = "Viaje iniciado con éxito.";
-                sendingDataElement.textContent = "Datos de viaje enviados con éxito.";
-
-                // Mostrar que los datos de telemetría también fueron enviados
-                telemetryDataElement.textContent = "Datos de telemetría enviados.";
-                progressBar.style.width = "100%";  // Completado
-
-                // Después de un tiempo, limpiar los mensajes
-                setTimeout(() => {
-                    document.getElementById("status").textContent = "";
-                    sendingDataElement.textContent = "";
-                    telemetryDataElement.textContent = "";
-                    progressBar.style.width = "0%";  // Reiniciar la barra
-                }, 5000);
-            })
-            .catch(error => {
-                document.getElementById("status").textContent = "Error al iniciar el viaje.";
-                sendingDataElement.textContent = "Error al enviar los datos de viaje.";
-                progressBar.style.width = "0%";  // Reiniciar si hay error
-            });
-        }
-
-        // Función para inicializar el mapa
-        function initMap() {
-            const initialLocation = { lat: 47.4076, lng: -8.5531 }; // Ubicación inicial
-
-            // Crear el mapa centrado en la ubicación inicial
-            const map = L.map('map').setView(initialLocation, 13);
-
-            // Añadir la capa de OpenStreetMap
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            // Añadir un marcador en la ubicación inicial
-            L.marker(initialLocation).addTo(map);
-        }
-
-        // Inicializar el mapa cuando se cargue la página
-        window.onload = initMap;
-    </script>
+    </style>
 </head>
-
 <body>
     <div class="container">
         <h3>Simulador de Viajes</h3>
-        <button onclick="startTrip()">Iniciar Viaje</button>
+        <button id="startTripBtn" onclick="startTrip()">Iniciar Viaje</button>
         <p id="status"></p>
 
         <div class="status-container">
@@ -262,10 +244,348 @@
 
         <div class="progress-bar" id="progressBar"></div>
 
-        <div id="map"></div>  <!-- Aquí se muestra el mapa -->
+        <!-- Info del viaje actual -->
+        <div class="info-container" id="tripInfoContainer" style="display:none;">
+            <div class="info-item">
+                <strong>ID de Viaje:</strong> <span id="tripId">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Dominio:</strong> <span id="dominio">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Origen:</strong> <span id="origen">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Destino:</strong> <span id="destino">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Transportista:</strong> <span id="transportista">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Precintos:</strong> <span id="precintos">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Estado:</strong> <span id="estado">-</span>
+            </div>
+            <div class="info-item">
+                <strong>Última actualización:</strong> <span id="ultimaActualizacion">-</span>
+            </div>
+        </div>
+
+        <!-- Mapa -->
+        <div id="map"></div>
+
+        <!-- Lista de eventos de telemetría -->
+        <h4 style="margin-top: 20px; text-align: left;">Eventos de Telemetría:</h4>
+        <ul id="telemetryEvents"></ul>
     </div>
 
-    <!-- Botón de modo oscuro en la parte superior derecha -->
+    <!-- Botón para cambiar entre modo claro y oscuro -->
     <button id="toggleMode" onclick="toggleMode()">Modo Noche</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script>
+        // Variables globales
+        let map = null;
+        let vehicleMarker = null;
+        let routePath = null;
+        let routePoints = [];
+        let currentTrip = null;
+        let isTripActive = false;
+        let telemetryCounter = 0;
+        const MAX_TELEMETRY_EVENTS = 10;
+
+        // Datos iniciales de viaje
+        const tripData = {
+            tipoViaje: "ld",
+            idSucursalOrigen: "20241",
+            idSucursalDestino: "20305",
+            hr: "122233",
+            transportista: "12254198",
+            dominio: "AA227DX",
+            dominioSemi: "AA800XM",
+            precintos: "1238A, 18239123, FOOBAR"
+        };
+
+        // Función para cambiar entre modo oscuro y modo claro
+        function toggleMode() {
+            document.body.classList.toggle('dark-mode');
+            const modeButton = document.getElementById('toggleMode');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                modeButton.textContent = 'Modo Día';
+                // Actualizar mapa a modo oscuro si existe
+                if (map) {
+                    document.querySelector('.leaflet-tile-pane').style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
+                }
+            } else {
+                modeButton.textContent = 'Modo Noche';
+                // Restaurar mapa a modo normal si existe
+                if (map) {
+                    document.querySelector('.leaflet-tile-pane').style.filter = 'none';
+                }
+            }
+        }
+
+        // Inicializar el mapa
+        function initMap() {
+            if (!map) {
+                // Coordenadas iniciales (ajustadas a las que usas en la telemetría)
+                const initialPos = [47.4076, -8.5531];
+                
+                map = L.map('map').setView(initialPos, 15);
+                
+                // Añadir la capa de OpenStreetMap
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+                
+                // Crear la ruta como una línea polilínea
+                routePath = L.polyline([], { 
+                    color: '#007bff',
+                    weight: 5,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                // Crear un marcador para el vehículo
+                const truckIcon = L.divIcon({
+                    html: `<div style="font-size: 24px;">🚚</div>`,
+                    className: 'truck-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                vehicleMarker = L.marker(initialPos, {
+                    icon: truckIcon
+                }).addTo(map);
+                
+                // Aplicar estilo oscuro si está activado
+                if (document.body.classList.contains('dark-mode')) {
+                    document.querySelector('.leaflet-tile-pane').style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
+                }
+            }
+        }
+
+        // Actualizar la posición del vehículo y la ruta
+        function updateVehiclePosition(lat, lng) {
+            if (!map) initMap();
+            
+            const newPos = [parseFloat(lat), parseFloat(lng)];
+            
+            // Actualizar posición del marcador
+            vehicleMarker.setLatLng(newPos);
+            
+            // Añadir punto a la ruta y actualizar línea
+            routePoints.push(newPos);
+            routePath.setLatLngs(routePoints);
+            
+            // Centrar el mapa en la nueva posición
+            map.panTo(newPos);
+            
+            // Zoom para ver toda la ruta si hay más de un punto
+            if (routePoints.length > 1) {
+                map.fitBounds(routePath.getBounds(), {
+                    padding: [50, 50], // Margen alrededor de la ruta
+                    maxZoom: 15        // Evitar zoom excesivo
+                });
+            }
+            
+            return newPos;
+        }
+
+        // Simular recepción de eventos de telemetría
+        function simulateTelemetryReceived(dominio) {
+            // Esta función simula la recepción de eventos de telemetría que normalmente
+            // vendría de un WebSocket o polling desde el backend
+            
+            // Crear un interval para simular eventos cada 5 segundos (10 en total)
+            const telemetryInterval = setInterval(() => {
+                // Generar datos de telemetría aleatorios
+                const telemetryData = {
+                    uuid: 'telemetry-' + Math.floor(Math.random() * 1000000),
+                    msgDateTime: new Date().toISOString(),
+                    deviceID: dominio,
+                    gps: {
+                        lat: (47.4076 + (Math.random() * 0.02) - 0.01).toFixed(6),
+                        long: (-8.5531 + (Math.random() * 0.02) - 0.01).toFixed(6)
+                    },
+                    eventos: [Math.floor(Math.random() * 100)]
+                };
+                
+                // Procesar el evento de telemetría
+                processTelemetryEvent(telemetryData);
+                
+                telemetryCounter++;
+                
+                // Detener después de 10 eventos
+                if (telemetryCounter >= 10) {
+                    clearInterval(telemetryInterval);
+                    
+                    // Actualizar estado cuando termina la simulación
+                    document.getElementById("telemetryData").textContent = "Simulación de telemetría completada.";
+                    document.getElementById("estado").textContent = "Completado";
+                    
+                    // Desactivar estado del viaje
+                    isTripActive = false;
+                    
+                    // Habilitar el botón para iniciar nuevo viaje
+                    document.getElementById("startTripBtn").disabled = false;
+                }
+            }, 5000); // Cada 5 segundos
+            
+            // Actualizar estado de telemetría
+            document.getElementById("telemetryData").textContent = "Recibiendo datos de telemetría...";
+        }
+
+        // Procesar un evento de telemetría
+        function processTelemetryEvent(data) {
+            // Actualizar posición en el mapa
+            const newPos = updateVehiclePosition(data.gps.lat, data.gps.long);
+            
+            // Actualizar información de última posición
+            document.getElementById("ultimaActualizacion").textContent = 
+                new Date(data.msgDateTime).toLocaleString();
+            
+            // Añadir evento a la lista
+            addTelemetryEventToList({
+                time: new Date(data.msgDateTime).toLocaleTimeString(),
+                position: `${data.gps.lat}, ${data.gps.long}`,
+                eventos: data.eventos.join(', ')
+            });
+        }
+
+        // Añadir evento a la lista de telemetría
+        function addTelemetryEventToList(event) {
+            const eventsList = document.getElementById("telemetryEvents");
+            
+            // Crear elemento de lista para el nuevo evento
+            const listItem = document.createElement("li");
+            listItem.className = "telemetry-event";
+            listItem.innerHTML = `
+                <strong>${event.time}</strong> - 
+                Posición: ${event.position} - 
+                Eventos: ${event.eventos}
+            `;
+            
+            // Añadir al principio de la lista
+            eventsList.insertBefore(listItem, eventsList.firstChild);
+            
+            // Limitar el número de eventos mostrados
+            while (eventsList.children.length > MAX_TELEMETRY_EVENTS) {
+                eventsList.removeChild(eventsList.lastChild);
+            }
+        }
+
+        // Iniciar un viaje
+        function startTrip() {
+            // Reiniciar el estado del viaje
+            resetTripState();
+            
+            // Mostrar que se está enviando los datos de viaje
+            const sendingDataElement = document.getElementById("sendingData");
+            sendingDataElement.textContent = "Enviando datos de viaje...";
+            
+            // Mostrar en la interfaz que estamos esperando telemetría
+            const telemetryDataElement = document.getElementById("telemetryData");
+            telemetryDataElement.textContent = "Esperando datos de telemetría...";
+            
+            // Barra de progreso
+            const progressBar = document.getElementById("progressBar");
+            progressBar.style.width = "50%";
+            
+            // Deshabilitar el botón mientras se procesa
+            document.getElementById("startTripBtn").disabled = true;
+            
+            // Enviar la solicitud de viaje
+            fetch('/start_trip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tripData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Mostrar mensaje de éxito
+                document.getElementById("status").textContent = "Viaje iniciado con éxito.";
+                sendingDataElement.textContent = "Datos de viaje enviados.";
+                
+                // Activar viaje
+                isTripActive = true;
+                currentTrip = {
+                    id: data.id_viaje,
+                    dominio: data.dominio
+                };
+                
+                // Actualizar información del viaje
+                updateTripInfo(data);
+                
+                // Mostrar el contenedor de info
+                document.getElementById("tripInfoContainer").style.display = "flex";
+                
+                // Inicializar mapa si no existe
+                initMap();
+                
+                // Simular la recepción de eventos de telemetría
+                simulateTelemetryReceived(data.dominio);
+                
+                // Completar la barra de progreso
+                progressBar.style.width = "100%";
+                
+                // Después de un tiempo, ocultar los mensajes de estado y la barra de progreso
+                setTimeout(() => {
+                    document.getElementById("status").textContent = "";
+                    progressBar.style.width = "0%";
+                }, 3000);
+            })
+            .catch(error => {
+                console.error("Error al iniciar viaje:", error);
+                
+                document.getElementById("status").textContent = "Error al iniciar el viaje.";
+                sendingDataElement.textContent = "Error al enviar los datos de viaje.";
+                progressBar.style.width = "0%";
+                
+                // Habilitar el botón de nuevo
+                document.getElementById("startTripBtn").disabled = false;
+            });
+        }
+
+        // Actualizar información del viaje en la interfaz
+        function updateTripInfo(data) {
+            document.getElementById("tripId").textContent = data.id_viaje || "-";
+            document.getElementById("dominio").textContent = data.dominio || "-";
+            document.getElementById("origen").textContent = tripData.idSucursalOrigen;
+            document.getElementById("destino").textContent = tripData.idSucursalDestino;
+            document.getElementById("transportista").textContent = tripData.transportista;
+            document.getElementById("precintos").textContent = tripData.precintos;
+            document.getElementById("estado").textContent = "En progreso";
+            document.getElementById("ultimaActualizacion").textContent = new Date().toLocaleString();
+        }
+
+        // Reiniciar el estado del viaje
+        function resetTripState() {
+            // Reiniciar contador de telemetría
+            telemetryCounter = 0;
+            
+            // Limpiar puntos de ruta
+            routePoints = [];
+            
+            // Limpiar ruta en el mapa si existe
+            if (routePath) {
+                routePath.setLatLngs([]);
+            }
+            
+            // Limpiar eventos de telemetría
+            document.getElementById("telemetryEvents").innerHTML = "";
+            
+            // Reiniciar viaje actual
+            currentTrip = null;
+            isTripActive = false;
+        }
+
+        // Inicializar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Asegurarse de que el contenedor de info esté oculto al inicio
+            document.getElementById("tripInfoContainer").style.display = "none";
+        });
+    </script>
 </body>
 </html>
