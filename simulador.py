@@ -6,6 +6,7 @@ import threading
 from google.cloud import pubsub_v1
 from datetime import datetime, timezone
 import random
+import string
 
 app = Flask(__name__)
 
@@ -15,6 +16,12 @@ TOPIC_VIAJE = "viaje-topic"
 TOPIC_TELEMETRIA = "telemetria-topic"
 publisher = pubsub_v1.PublisherClient()
 
+# Función para generar un dominio aleatorio
+def generate_random_domain():
+    length = 6  # Longitud del dominio
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+# Función para publicar mensajes en Pub/Sub
 def publish_message(topic_name, message):
     try:
         topic_path = publisher.topic_path(PROJECT_ID, topic_name)
@@ -25,17 +32,25 @@ def publish_message(topic_name, message):
     except Exception as e:
         print(f"Error al publicar mensaje en {topic_name}: {str(e)}")
 
+# Ruta principal
 @app.route("/")
 def index():
     return render_template("index.html")
 
+# Ruta para el favicon (para evitar error 404)
 @app.route("/favicon.ico")
 def favicon():
     return '', 204  # Responde con un estado 204 (No Content) para evitar el error 404
 
+# Ruta para iniciar un viaje
 @app.route("/start_trip", methods=["POST"])
 def start_trip():
     data = request.json
+    
+    # Generar un dominio aleatorio
+    dominio_aleatorio = generate_random_domain()  # Llamar a la función para generar un dominio aleatorio
+
+    # Crear el mensaje de viaje con el dominio aleatorio
     trip_message = {
         "uuid": str(uuid.uuid4()),
         "msgDateTime": datetime.now(timezone.utc).isoformat(),
@@ -47,17 +62,20 @@ def start_trip():
             "idSucursalDestino": data["idSucursalDestino"],
             "hr": data["hr"],
             "transportista": data["transportista"],
-            "dominio": data["dominio"],
+            "dominio": dominio_aleatorio,  # Asignar el dominio aleatorio aquí
             "dominioSemi": data["dominioSemi"],
             "precintos": data["precintos"]
         }
     }
     publish_message(TOPIC_VIAJE, trip_message)
     
-    # Iniciar un hilo para la simulación de telemetría
-    threading.Thread(target=simulate_telemetry, args=(data["dominio"],)).start()
-    return jsonify({"status": "viaje iniciado"})
+    # Iniciar un hilo para la simulación de telemetría usando el dominio aleatorio
+    threading.Thread(target=simulate_telemetry, args=(dominio_aleatorio,)).start()
+    
+    # Responder con el estado, el dominio generado y el id de viaje
+    return jsonify({"status": "viaje iniciado", "dominio": dominio_aleatorio, "id_viaje": trip_message["uuid"]})
 
+# Función para simular telemetría
 def simulate_telemetry(dominio):
     for _ in range(10):  # Enviar 10 mensajes de telemetría como prueba
         telemetry_message = {
