@@ -6,7 +6,7 @@
     <title>Simulador de Viajes</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -16,45 +16,41 @@
         }
         .container {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 300px;
-        }
-        h1 {
-            color: #333;
-            font-size: 24px;
-            margin-bottom: 20px;
         }
         button {
-            padding: 12px 25px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             background-color: #28a745;
             color: white;
             font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #218838;
         }
         button:disabled {
             background-color: #ccc;
-            cursor: not-allowed;
         }
         #status {
+            margin-top: 10px;
+        }
+        #sendingData {
             margin-top: 20px;
-            font-size: 16px;
             color: #555;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #telemetryData {
+            margin-top: 20px;
+            color: #555;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
     <script>
         function startTrip() {
-            const statusText = document.getElementById("status");
-            statusText.textContent = "Enviando datos...";  // Estado cuando se empieza a enviar
-
             const tripData = {
                 tipoViaje: "ld",
                 idSucursalOrigen: "20241",
@@ -66,6 +62,14 @@
                 precintos: "1238A, 18239123, FOOBAR"
             };
 
+            // Mostrar los datos del viaje
+            const sendingDataElement = document.getElementById("sendingData");
+            sendingDataElement.textContent = "Enviando datos de viaje: " + JSON.stringify(tripData, null, 2);
+
+            // Mostrar en la interfaz que estamos enviando el mensaje de telemetría
+            const telemetryDataElement = document.getElementById("telemetryData");
+            telemetryDataElement.textContent = "Enviando datos de telemetría: No disponible aún.";
+
             fetch('/start_trip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,21 +77,40 @@
             })
             .then(response => response.json())
             .then(data => {
-                statusText.textContent = "Viaje iniciado con éxito.";  // Estado cuando la respuesta es recibida
-                alert("Viaje iniciado: " + JSON.stringify(data));
+                document.getElementById("status").textContent = "Viaje iniciado con éxito.";
+                sendingDataElement.textContent = "Datos de viaje enviados con éxito.";
+
+                // Simulación de telemetría enviada, mostrar ejemplo de telemetría
+                const telemetryMessage = {
+                    uuid: "12345",
+                    msgDateTime: "2025-02-28T18:00:00Z",
+                    messageType: "evento",
+                    deviceID: tripData.dominio,
+                    deviceVendor: "Integra",
+                    deviceType: "emulated",
+                    gps: {
+                        lat: "47.4076",
+                        long: "-8.5531"
+                    },
+                    eventos: [76]
+                };
+
+                telemetryDataElement.textContent = "Datos de telemetría enviados: " + JSON.stringify(telemetryMessage, null, 2);
             })
             .catch(error => {
-                statusText.textContent = "Error al iniciar el viaje.";  // Estado en caso de error
-                console.error('Error:', error);
+                document.getElementById("status").textContent = "Error al iniciar el viaje.";
+                sendingDataElement.textContent = "Error al enviar los datos de viaje.";
             });
         }
     </script>
 </head>
 <body>
     <div class="container">
-        <h1>Simulador de Viajes</h1>
+        <h3>Simulador de Viajes</h3>
         <button onclick="startTrip()">Iniciar Viaje</button>
         <p id="status"></p>
+        <pre id="sendingData"></pre> <!-- Datos del viaje enviados -->
+        <pre id="telemetryData"></pre> <!-- Datos de telemetría enviados -->
     </div>
 </body>
 </html>
