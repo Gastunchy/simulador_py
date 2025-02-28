@@ -10,7 +10,7 @@ import random
 app = Flask(__name__)
 
 # Configuración de Pub/Sub
-PROJECT_ID = "crypto-avatar-452213-k0"
+PROJECT_ID = "tu-proyecto"
 TOPIC_VIAJE = "viaje-topic"
 TOPIC_TELEMETRIA = "telemetria-topic"
 publisher = pubsub_v1.PublisherClient()
@@ -22,6 +22,10 @@ def publish_message(topic_name, message):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route("/favicon.ico")
+def favicon():
+    return '', 204  # Responde con un estado 204 (No Content) para evitar el error 404
 
 @app.route("/start_trip", methods=["POST"])
 def start_trip():
