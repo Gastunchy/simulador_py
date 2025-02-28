@@ -17,7 +17,10 @@ publisher = pubsub_v1.PublisherClient()
 
 def publish_message(topic_name, message):
     topic_path = publisher.topic_path(PROJECT_ID, topic_name)
-    publisher.publish(topic_path, json.dumps(message).encode("utf-8"))
+    print(f"Publicando en {topic_name}: {json.dumps(message, indent=2)}")  # Log antes de publicar
+    future = publisher.publish(topic_path, json.dumps(message).encode("utf-8"))
+    future.result()  # Esperar a que se publique
+    print(f"Mensaje publicado en {topic_name}")  # Log después de publicar
 
 @app.route("/")
 def index():
