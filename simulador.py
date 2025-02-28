@@ -16,11 +16,14 @@ TOPIC_TELEMETRIA = "telemetria-topic"
 publisher = pubsub_v1.PublisherClient()
 
 def publish_message(topic_name, message):
-    topic_path = publisher.topic_path(PROJECT_ID, topic_name)
-    print(f"Publicando en {topic_name}: {json.dumps(message, indent=2)}")  # Log antes de publicar
-    future = publisher.publish(topic_path, json.dumps(message).encode("utf-8"))
-    future.result()  # Esperar a que se publique
-    print(f"Mensaje publicado en {topic_name}")  # Log después de publicar
+    try:
+        topic_path = publisher.topic_path(PROJECT_ID, topic_name)
+        print(f"Enviando mensaje a {topic_name}")  # Log antes de publicar
+        future = publisher.publish(topic_path, json.dumps(message).encode("utf-8"))
+        future.result()  # Esperar a que se publique
+        print(f"Mensaje publicado en {topic_name}")  # Log después de publicar
+    except Exception as e:
+        print(f"Error al publicar mensaje en {topic_name}: {str(e)}")
 
 @app.route("/")
 def index():
@@ -51,6 +54,7 @@ def start_trip():
     }
     publish_message(TOPIC_VIAJE, trip_message)
     
+    # Iniciar un hilo para la simulación de telemetría
     threading.Thread(target=simulate_telemetry, args=(data["dominio"],)).start()
     return jsonify({"status": "viaje iniciado"})
 
@@ -69,7 +73,9 @@ def simulate_telemetry(dominio):
             },
             "eventos": [76]
         }
+        print(f"Publicando telemetría para {dominio}")  # Log antes de enviar
         publish_message(TOPIC_TELEMETRIA, telemetry_message)
+        print(f"Mensaje de telemetría enviado para dominio {dominio}")  # Log después de enviar
         time.sleep(5)  # Esperar 5 segundos entre mensajes
 
 if __name__ == "__main__":
