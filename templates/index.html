@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Viajes</title>
+    <script>
+        function startTrip() {
+            const tripData = {
+                tipoViaje: "ld",
+                idSucursalOrigen: "20241",
+                idSucursalDestino: "20305",
+                hr: "122233",
+                transportista: "12254198",
+                dominio: "AA227DX",
+                dominioSemi: "AA800XM",
+                precintos: "1238A, 18239123, FOOBAR"
+            };
+
+            fetch('/start_trip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tripData)
+            })
+            .then(response => response.json())
+            .then(data => alert("Viaje iniciado: " + JSON.stringify(data)))
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</head>
+<body>
+    <h1>Simulador de Viajes</h1>
+    <button onclick="startTrip()">Iniciar Viaje</button>
+</body>
+</html>
