@@ -16,7 +16,8 @@ PROJECT_ID = os.getenv("PROJECT_ID", "")  # Valor por defecto si no está defini
 TOPIC_VIAJE = os.getenv("TOPIC_VIAJE", "")
 TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA", "")
 
-# Crear el cliente de Pub/Sub sin la necesidad de la variable GOOGLE_APPLICATION_CREDENTIALS_JSON_PATH
+# Crear el cliente de Pub/Sub
+# Nota: Esto asume que las credenciales están configuradas en el entorno
 publisher = pubsub_v1.PublisherClient()
 
 # Almacenamiento en memoria para viajes activos
@@ -80,8 +81,9 @@ def start_trip():
     # Guardar información del viaje activo
     active_trips[trip_id] = {
         "dominio": dominio_aleatorio,
-        "start_time": datetime.now(timezone.utc),
-        "telemetry_events": []
+        "start_time": datetime.now(timezone.utc).isoformat(),
+        "telemetry_events": [],
+        "status": "active"
     }
     
     # Publicar mensaje de viaje
@@ -89,7 +91,12 @@ def start_trip():
     
     if success:
         # Iniciar un hilo para la simulación de telemetría usando el dominio aleatorio
-        threading.Thread(target=simulate_telemetry, args=(trip_id, dominio_aleatorio)).start()
+        telemetry_thread = threading.Thread(
+            target=simulate_telemetry, 
+            args=(trip_id, dominio_aleatorio),
+            daemon=True
+        )
+        telemetry_thread.start()
         
         # Responder con el estado, el dominio generado y el id de viaje
         return jsonify({
@@ -163,6 +170,10 @@ def simulate_telemetry(trip_id, dominio):
                 "position": {"lat": lat, "long": long},
                 "events": [evento_code]
             })
+        else:
+            # Trip no longer exists, stop simulation
+            print(f"El viaje {trip_id} ya no existe, deteniendo simulación de telemetría")
+            break
         
         # Publicar mensaje de telemetría
         publish_message(TOPIC_TELEMETRIA, telemetry_message)
@@ -175,6 +186,14 @@ def simulate_telemetry(trip_id, dominio):
     if trip_id in active_trips:
         active_trips[trip_id]["status"] = "completed"
         active_trips[trip_id]["end_time"] = datetime.now(timezone.utc).isoformat()
+        print(f"Viaje {trip_id} completado")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    # Obtener puerto desde variable de entorno o usar el predeterminado
+    port = int(os.getenv("PORT", 8080))
+    
+    # En producción, no usar modo debug
+    debug_mode = os.getenv("FLASK_ENV") == "development"
+    
+    print(f"Iniciando aplicación Flask en el puerto {port}")
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
