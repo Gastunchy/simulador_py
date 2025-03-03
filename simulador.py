@@ -9,14 +9,21 @@ import random
 import string
 import math
 import logging
+import os
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 
+load_dotenv()
+
 # Configuración de Pub/Sub
-PROJECT_ID = "crypto-avatar-452213-k0"
-TOPIC_VIAJE = "viaje-topic"
-TOPIC_TELEMETRIA = "telemetria-topic"
+PROJECT_ID = os.getenv("PROJECT_ID")
+TOPIC_VIAJE = os.getenv("TOPIC_VIAJE")
+TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA")
 publisher = pubsub_v1.PublisherClient()
+
+# Configurar credenciales de Google Cloud
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 # Almacenamiento en memoria para viajes activos
 active_trips = {}
