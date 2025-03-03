@@ -121,27 +121,120 @@ def get_telemetry(trip_id):
 
 # Función para simular telemetría más realista
 def simulate_telemetry(trip_id, dominio):
-    # Definir una ruta más realista (coordenadas para una ruta)
-    # Usando aproximadamente las coordenadas de tu ejemplo pero haciendo una ruta más larga
-    base_lat = 47.4076
-    base_long = -8.5531
+    # Define starting and ending points
+    # Using real-world coordinates for a sensible route
+    start_lat, start_long = 47.4076, -8.5531
+    end_lat, end_long = 47.4376, -8.5231  # Destination ~3-4km away
     
-    # Crear una ruta simulada con 10 puntos, añadiendo variación progresiva
-    route = []
-    for i in range(10):
-        # Incrementar de manera progresiva para simular movimiento
-        lat = base_lat + (i * 0.002) + random.uniform(-0.0005, 0.0005)
-        long = base_long + (i * 0.003) + random.uniform(-0.0005, 0.0005)
-        route.append((lat, long))
+    # Create waypoints to simulate a realistic route (like following roads)
+    # These act as major turns or intersections a vehicle would follow
+    waypoints = [
+        (start_lat, start_long),  # Starting point
+        (start_lat + 0.008, start_long + 0.003),  # First turn
+        (start_lat + 0.012, start_long + 0.009),  # Second turn
+        (start_lat + 0.018, start_long + 0.014),  # Third turn
+        (start_lat + 0.025, start_long + 0.022),  # Fourth turn
+        (end_lat, end_long)  # Destination
+    ]
     
-    for i, (lat, long) in enumerate(route):
-        # Código de evento aleatorio (entre 70 y 90 para mantenerlo en un rango específico)
-        evento_code = random.randint(70, 90)
+    # Generate detailed route by interpolating between waypoints
+    detailed_route = []
+    for i in range(len(waypoints) - 1):
+        # Get current and next waypoint
+        curr_lat, curr_long = waypoints[i]
+        next_lat, next_long = waypoints[i + 1]
+        
+        # Calculate how many points to generate between these waypoints
+        # More points for longer segments
+        distance = ((next_lat - curr_lat)**2 + (next_long - curr_long)**2)**0.5
+        num_points = max(3, int(distance * 1000))  # Minimum 3 points, scaled by distance
+        
+        # Generate points along this segment with realistic variations
+        for j in range(num_points):
+            # Linear interpolation between waypoints
+            ratio = j / num_points
+            lat = curr_lat + (next_lat - curr_lat) * ratio
+            long = curr_long + (next_long - curr_long) * ratio
+            
+            # Add realistic GPS noise/drift
+            gps_noise = random.uniform(-0.00008, 0.00008)  # ~5-10 meter accuracy
+            
+            # Add road-following behavior (vehicles tend to stay on roads)
+            # Deviation is higher at the start of segments and reduces as approaching waypoints
+            deviation_factor = 0.5 * (1 - abs(2 * ratio - 1))  # Peaks in the middle of segments
+            road_deviation = random.uniform(-0.0001, 0.0001) * deviation_factor
+            
+            # Apply noise and deviation
+            lat += gps_noise + road_deviation
+            long += gps_noise + road_deviation
+            
+            detailed_route.append((lat, long))
+    
+    # Variables to simulate speed changes
+    current_speed = random.uniform(50, 70)  # Starting speed in km/h
+    
+    # Timestamp handling for realistic timing
+    current_time = datetime.now(timezone.utc)
+    
+    for i, (lat, long) in enumerate(detailed_route):
+        # Simulate speed changes - slow down near turns, speed up on straightaways
+        if i > 0 and i < len(detailed_route) - 1:
+            prev_lat, prev_long = detailed_route[i-1]
+            next_lat, next_long = detailed_route[i+1]
+            
+            # Calculate directional change to detect turns
+            direction_change = abs((next_lat - lat) * (lat - prev_lat) + 
+                                  (next_long - long) * (long - prev_long))
+            
+            # Adjust speed based on turns (lower number = sharper turn)
+            if direction_change < 0.00001:  # Sharp turn
+                current_speed = max(20, current_speed * 0.85)  # Slow down significantly
+            elif direction_change < 0.0001:  # Moderate turn
+                current_speed = max(30, current_speed * 0.9)  # Slow down moderately
+            else:  # Straight section
+                current_speed = min(90, current_speed * 1.05)  # Speed up gradually
+        
+        # Calculate time based on distance and speed
+        if i > 0:
+            prev_lat, prev_long = detailed_route[i-1]
+            # Distance in km (approximate using Haversine would be better)
+            distance_km = ((lat - prev_lat)**2 + (long - prev_long)**2)**0.5 * 111
+            # Time in hours = distance / speed
+            time_hours = distance_km / current_speed
+            # Convert to seconds
+            time_seconds = time_hours * 3600
+            # Add some randomness to time
+            time_seconds *= random.uniform(0.9, 1.1)
+            # Update current time
+            current_time = current_time + datetime.timedelta(seconds=time_seconds)
+        
+        # Código de evento contextual
+        # Generate more meaningful event codes
+        # 70-75: Regular movement events
+        # 76-80: Speed-related events
+        # 81-85: Turn-related events
+        # 86-90: Special conditions
+        
+        if current_speed > 80:
+            evento_code = random.randint(76, 80)  # Speed-related
+        elif i > 0 and i < len(detailed_route) - 1:
+            prev_lat, prev_long = detailed_route[i-1]
+            next_lat, next_long = detailed_route[i+1]
+            direction_change = abs((next_lat - lat) * (lat - prev_lat) + 
+                                  (next_long - long) * (long - prev_long))
+            
+            if direction_change < 0.0001:  # Turn detected
+                evento_code = random.randint(81, 85)  # Turn-related
+            else:
+                evento_code = random.randint(70, 75)  # Regular movement
+        else:
+            # Start or end of journey
+            evento_code = random.randint(86, 90)  # Special condition
         
         # Crear mensaje de telemetría
         telemetry_message = {
             "uuid": str(uuid.uuid4()),
-            "msgDateTime": datetime.now(timezone.utc).isoformat(),
+            "msgDateTime": current_time.isoformat(),
             "messageType": "evento",
             "deviceID": dominio,
             "deviceVendor": "Integra",
@@ -153,20 +246,26 @@ def simulate_telemetry(trip_id, dominio):
             "eventos": [evento_code]
         }
         
+        # Añadir velocidad a los datos si está disponible
+        if current_speed:
+            telemetry_message["speed"] = round(current_speed, 1)
+        
         # Guardar el evento de telemetría para este viaje
         if trip_id in active_trips:
             active_trips[trip_id]["telemetry_events"].append({
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": current_time.isoformat(),
                 "position": {"lat": lat, "long": long},
+                "speed": round(current_speed, 1),
                 "events": [evento_code]
             })
         
         # Publicar mensaje de telemetría
         publish_message(TOPIC_TELEMETRIA, telemetry_message)
-        print(f"Mensaje de telemetría enviado para dominio {dominio}, posición {lat}, {long}")
+        print(f"Mensaje de telemetría enviado para dominio {dominio}, posición {lat}, {long}, velocidad {round(current_speed, 1)} km/h")
         
-        # Esperar entre mensajes (tiempo variable para mayor realismo)
-        time.sleep(random.uniform(4.0, 6.0))
+        # Wait a short time between message publishing for simulation purposes
+        # This doesn't affect the simulated timestamps
+        time.sleep(random.uniform(0.5, 1.5))
     
     # Después de completar la ruta, marcar el viaje como completado
     if trip_id in active_trips:
