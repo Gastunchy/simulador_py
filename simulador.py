@@ -7,19 +7,13 @@ from google.cloud import pubsub_v1
 from datetime import datetime, timezone
 import random
 import string
-import os
-from dotenv import load_dotenv
-
-# Cargar las variables de entorno desde el archivo .env
-load_dotenv()
 
 app = Flask(__name__)
 
 # Configuración de Pub/Sub
-PROJECT_ID = os.getenv('Project')
-TOPIC_VIAJE = os.getenv('viaje_topic')
-TOPIC_TELEMETRIA = os.getenv('telemetria_topic')
-
+PROJECT_ID = "crypto-avatar-452213-k0"
+TOPIC_VIAJE = "viaje-topic"
+TOPIC_TELEMETRIA = "telemetria-topic"
 publisher = pubsub_v1.PublisherClient()
 
 # Almacenamiento en memoria para viajes activos
