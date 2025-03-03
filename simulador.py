@@ -10,7 +10,6 @@ import logging
 from datetime import datetime, timezone, timedelta
 from flask import Flask, render_template, request, jsonify
 from google.cloud import pubsub_v1, secretmanager
-from dotenv import load_dotenv
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -20,30 +19,40 @@ app = Flask(__name__)
 
 # Función para cargar el secreto desde Google Secret Manager
 def load_secret(secret_name):
-    client = secretmanager.SecretManagerServiceClient()
-    secret = client.access_secret_version(request={"name": secret_name}).payload.data.decode("UTF-8")
-    return json.loads(secret)
+    try:
+        client = secretmanager.SecretManagerServiceClient()
+        secret = client.access_secret_version(request={"name": secret_name}).payload.data.decode("UTF-8")
+        return json.loads(secret)
+    except Exception as e:
+        logging.error(f"Error al cargar el secreto {secret_name}: {e}")
+        return {}
 
 # Cargar configuraciones desde el secreto
-env = load_secret("projects/488709866434/secrets/simulador_secret")
+secret_name = "projects/488709866434/secrets/simulador_secret/versions/latest"
+env = load_secret(secret_name)
 PROJECT_ID = env.get("PROJECT_ID")
 TOPIC_VIAJE = env.get("TOPIC_VIAJE")
 TOPIC_TELEMETRIA = env.get("TOPIC_TELEMETRIA")
 
+# Verificar que las variables de entorno se hayan cargado correctamente
+if not PROJECT_ID or not TOPIC_VIAJE or not TOPIC_TELEMETRIA:
+    raise ValueError("Las variables de entorno no están configuradas correctamente.")
+
 # Configuración de Pub/Sub
 publisher = pubsub_v1.PublisherClient()
+
+# Configurar credenciales de Google Cloud (descomentar si es necesario)
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+# Almacenamiento en memoria para viajes activos
 active_trips = {}
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
-
-# Inicializar la aplicación Flask
-app = Flask(__name__)
-
+# Función para generar un dominio aleatorio
 def generate_random_domain(length=6):
     """Genera un dominio aleatorio de longitud especificada."""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+# Función para publicar un mensaje en Pub/Sub
 def publish_message(topic_name, message):
     """Publica un mensaje en un tópico de Pub/Sub."""
     try:
