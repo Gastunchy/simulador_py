@@ -7,13 +7,28 @@ from google.cloud import pubsub_v1
 from datetime import datetime, timezone
 import random
 import string
+import json
+from google.cloud import secretmanager
 
 app = Flask(__name__)
 
+def load_secret():
+    """Carga el secreto desde Google Secret Manager."""
+    client = secretmanager.SecretManagerServiceClient()
+    secret_name = "projects/488709866434/secrets/simulador_secret/versions/latest"
+    try:
+        secret = client.access_secret_version(request={"name": secret_name}).payload.data.decode("UTF-8")
+        return json.loads(secret)  # Retorna como diccionario
+    except Exception:
+        return {}  # Devuelve un diccionario vacío si falla
+
+secreto = load_secret()
+
 # Configuración de Pub/Sub
-PROJECT_ID = "crypto-avatar-452213-k0"
-TOPIC_VIAJE = "viaje-topic"
-TOPIC_TELEMETRIA = "telemetria-topic"
+PROJECT_ID = secreto.get('PROJECT_ID')
+TOPIC_VIAJE = secreto.get('TOPIC_VIAJE')
+TOPIC_TELEMETRIA = secreto.get('TOPIC_TELEMETRIA')
+
 publisher = pubsub_v1.PublisherClient()
 
 # Almacenamiento en memoria para viajes activos
