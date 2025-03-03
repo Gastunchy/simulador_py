@@ -17,7 +17,7 @@ TOPIC_VIAJE = os.getenv("TOPIC_VIAJE", "")
 TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA", "")
 
 # Establecer la variable de entorno para el Service Account
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON_PATH")
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON_PATH")
 
 # Crear el cliente de Pub/Sub con el Service Account configurado
 publisher = pubsub_v1.PublisherClient()
