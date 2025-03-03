@@ -1,50 +1,21 @@
-import os
+from flask import Flask, render_template, request, jsonify
 import json
 import uuid
 import time
 import threading
+from google.cloud import pubsub_v1
+from datetime import datetime, timezone
 import random
 import string
-import math
-import logging
-from datetime import datetime, timezone, timedelta
-from flask import Flask, render_template, request, jsonify
-from google.cloud import pubsub_v1, secretmanager
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
-
-# Inicializar la aplicación Flask
 app = Flask(__name__)
 
-# Función para cargar el secreto desde Google Secret Manager
-def load_secret(secret_name):
-    try:
-        client = secretmanager.SecretManagerServiceClient()
-        secret = client.access_secret_version(request={"name": secret_name}).payload.data.decode("UTF-8")
-        return json.loads(secret)
-    except Exception as e:
-        logging.error(f"Error al cargar el secreto {secret_name}: {e}")
-        return {}
-
-# Cargar configuraciones desde el secreto
-secret_name = "projects/488709866434/secrets/simulador_secret/versions/latest"
-env = load_secret(secret_name)
-PROJECT_ID = env.get("PROJECT_ID")
-TOPIC_VIAJE = env.get("TOPIC_VIAJE")
-TOPIC_TELEMETRIA = env.get("TOPIC_TELEMETRIA")
-
-# Verificar que las variables de entorno se hayan cargado correctamente
-if not PROJECT_ID or not TOPIC_VIAJE or not TOPIC_TELEMETRIA:
-    raise ValueError("Las variables de entorno no están configuradas correctamente.")
-
 # Configuración de Pub/Sub
+PROJECT_ID = "crypto-avatar-452213-k0"
+TOPIC_VIAJE = "viaje-topic"
+TOPIC_TELEMETRIA = "telemetria-topic"
 publisher = pubsub_v1.PublisherClient()
 
-# Configurar credenciales de Google Cloud (descomentar si es necesario)
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-# Almacenamiento en memoria para viajes activos
 active_trips = {}
 
 # Función para generar un dominio aleatorio
