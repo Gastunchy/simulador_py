@@ -223,6 +223,7 @@ def generate_detailed_route(waypoints):
             long += gps_noise_long + road_deviation_long
             
             detailed_route.append((lat, long))
+            logging.info(f"Generated coordinate: ({lat}, {long})")
     return detailed_route
 
 def adjust_speed_and_event(i, lat, long, detailed_route, waypoints, current_speed):
