@@ -1,6 +1,6 @@
 import os
-from flask import Flask, render_template, request, jsonify
 import json
+from flask import Flask, render_template, request, jsonify
 import uuid
 import time
 import threading
@@ -8,17 +8,34 @@ from google.cloud import pubsub_v1
 from datetime import datetime, timezone
 import random
 import string
+from google.oauth2 import service_account
 
 app = Flask(__name__)
 
-# Configuración de Pub/Sub usando variables de entorno
-PROJECT_ID = os.getenv("PROJECT_ID", "")  # Valor por defecto si no está definida
-TOPIC_VIAJE = os.getenv("TOPIC_VIAJE", "")
-TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA", "")
+# Cargar configuración desde una variable de entorno en formato JSON
+config_json = os.getenv("CONFIG_JSON")
 
-# Crear el cliente de Pub/Sub
-# Nota: Esto asume que las credenciales están configuradas en el entorno
-publisher = pubsub_v1.PublisherClient()
+if not config_json:
+    raise ValueError("La variable de entorno CONFIG_JSON no está definida.")
+
+# Convertir la cadena JSON a un diccionario
+config = json.loads(config_json)
+
+# Extraer las variables desde el JSON
+PROJECT_ID = config.get("PROJECT_ID")
+TOPIC_VIAJE = config.get("TOPIC_VIAJE")
+TOPIC_TELEMETRIA = config.get("TOPIC_TELEMETRIA")
+SERVICE_ACCOUNT_KEY = config.get("SERVICE_ACCOUNT_KEY")  # El JSON de credenciales
+
+# Validar que todas las variables necesarias están presentes
+if not all([PROJECT_ID, TOPIC_VIAJE, TOPIC_TELEMETRIA, SERVICE_ACCOUNT_KEY]):
+    raise ValueError("Faltan valores en CONFIG_JSON. Verifica que todas las claves estén presentes.")
+
+# Convertir SERVICE_ACCOUNT_KEY de string JSON a diccionario
+SERVICE_ACCOUNT_KEY = json.loads(config.get("SERVICE_ACCOUNT_KEY"))
+
+# Crear credenciales de servicio correctamente
+credentials = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_KEY)
 
 # Almacenamiento en memoria para viajes activos
 active_trips = {}
@@ -41,26 +58,17 @@ def publish_message(topic_name, message):
         print(f"Error al publicar mensaje en {topic_name}: {str(e)}")
         return False
 
-# Ruta principal
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# Ruta para el favicon (para evitar error 404)
-@app.route("/favicon.ico")
-def favicon():
-    return '', 204  # Responde con un estado 204 (No Content) para evitar el error 404
-
-# Ruta para iniciar un viaje
 @app.route("/start_trip", methods=["POST"])
 def start_trip():
     data = request.json
     
-    # Generar un dominio aleatorio
-    dominio_aleatorio = generate_random_domain()  # Llamar a la función para generar un dominio aleatorio
+    dominio_aleatorio = generate_random_domain()
     trip_id = str(uuid.uuid4())
     
-    # Crear el mensaje de viaje con el dominio aleatorio
     trip_message = {
         "uuid": trip_id,
         "msgDateTime": datetime.now(timezone.utc).isoformat(),
@@ -72,13 +80,12 @@ def start_trip():
             "idSucursalDestino": data["idSucursalDestino"],
             "hr": data["hr"],
             "transportista": data["transportista"],
-            "dominio": dominio_aleatorio,  # Asignar el dominio aleatorio aquí
+            "dominio": dominio_aleatorio,
             "dominioSemi": data["dominioSemi"],
             "precintos": data["precintos"]
         }
     }
     
-    # Guardar información del viaje activo
     active_trips[trip_id] = {
         "dominio": dominio_aleatorio,
         "start_time": datetime.now(timezone.utc).isoformat(),
@@ -86,69 +93,43 @@ def start_trip():
         "status": "active"
     }
     
-    # Publicar mensaje de viaje
     success = publish_message(TOPIC_VIAJE, trip_message)
     
     if success:
-        # Iniciar un hilo para la simulación de telemetría usando el dominio aleatorio
-        telemetry_thread = threading.Thread(
-            target=simulate_telemetry, 
-            args=(trip_id, dominio_aleatorio),
-            daemon=True
-        )
+        telemetry_thread = threading.Thread(target=simulate_telemetry, args=(trip_id, dominio_aleatorio), daemon=True)
         telemetry_thread.start()
         
-        # Responder con el estado, el dominio generado y el id de viaje
-        return jsonify({
-            "status": "viaje iniciado", 
-            "dominio": dominio_aleatorio, 
-            "id_viaje": trip_id
-        })
+        return jsonify({"status": "viaje iniciado", "dominio": dominio_aleatorio, "id_viaje": trip_id})
     else:
         return jsonify({"status": "error", "message": "Error al publicar mensaje de viaje"}), 500
 
-# Ruta para obtener el estado de un viaje
 @app.route("/trip_status/<trip_id>", methods=["GET"])
 def trip_status(trip_id):
     if trip_id in active_trips:
-        return jsonify({
-            "status": "active",
-            "trip_info": active_trips[trip_id]
-        })
+        return jsonify({"status": "active", "trip_info": active_trips[trip_id]})
     else:
         return jsonify({"status": "not_found"}), 404
 
-# Ruta para obtener los eventos de telemetría de un viaje
 @app.route("/telemetry/<trip_id>", methods=["GET"])
 def get_telemetry(trip_id):
     if trip_id in active_trips:
-        return jsonify({
-            "status": "success",
-            "telemetry": active_trips[trip_id]["telemetry_events"]
-        })
+        return jsonify({"status": "success", "telemetry": active_trips[trip_id]["telemetry_events"]})
     else:
         return jsonify({"status": "not_found"}), 404
 
-# Función para simular telemetría más realista
 def simulate_telemetry(trip_id, dominio):
-    # Definir una ruta más realista (coordenadas para una ruta)
-    # Usando aproximadamente las coordenadas de tu ejemplo pero haciendo una ruta más larga
     base_lat = 47.4076
     base_long = -8.5531
     
-    # Crear una ruta simulada con 10 puntos, añadiendo variación progresiva
     route = []
     for i in range(10):
-        # Incrementar de manera progresiva para simular movimiento
         lat = base_lat + (i * 0.002) + random.uniform(-0.0005, 0.0005)
         long = base_long + (i * 0.003) + random.uniform(-0.0005, 0.0005)
         route.append((lat, long))
     
     for i, (lat, long) in enumerate(route):
-        # Código de evento aleatorio (entre 70 y 90 para mantenerlo en un rango específico)
         evento_code = random.randint(70, 90)
         
-        # Crear mensaje de telemetría
         telemetry_message = {
             "uuid": str(uuid.uuid4()),
             "msgDateTime": datetime.now(timezone.utc).isoformat(),
@@ -163,7 +144,6 @@ def simulate_telemetry(trip_id, dominio):
             "eventos": [evento_code]
         }
         
-        # Guardar el evento de telemetría para este viaje
         if trip_id in active_trips:
             active_trips[trip_id]["telemetry_events"].append({
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -171,28 +151,21 @@ def simulate_telemetry(trip_id, dominio):
                 "events": [evento_code]
             })
         else:
-            # Trip no longer exists, stop simulation
             print(f"El viaje {trip_id} ya no existe, deteniendo simulación de telemetría")
             break
         
-        # Publicar mensaje de telemetría
         publish_message(TOPIC_TELEMETRIA, telemetry_message)
         print(f"Mensaje de telemetría enviado para dominio {dominio}, posición {lat}, {long}")
         
-        # Esperar entre mensajes (tiempo variable para mayor realismo)
         time.sleep(random.uniform(4.0, 6.0))
     
-    # Después de completar la ruta, marcar el viaje como completado
     if trip_id in active_trips:
         active_trips[trip_id]["status"] = "completed"
         active_trips[trip_id]["end_time"] = datetime.now(timezone.utc).isoformat()
         print(f"Viaje {trip_id} completado")
 
 if __name__ == "__main__":
-    # Obtener puerto desde variable de entorno o usar el predeterminado
     port = int(os.getenv("PORT", 8080))
-    
-    # En producción, no usar modo debug
     debug_mode = os.getenv("FLASK_ENV") == "development"
     
     print(f"Iniciando aplicación Flask en el puerto {port}")
