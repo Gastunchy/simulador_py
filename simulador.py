@@ -9,22 +9,29 @@ import math
 import logging
 from datetime import datetime, timezone, timedelta
 from flask import Flask, render_template, request, jsonify
-from google.cloud import pubsub_v1
+from google.cloud import pubsub_v1, secretmanager
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
-load_dotenv()
+# Configuración de logging
+logging.basicConfig(level=logging.INFO)
+
+# Inicializar la aplicación Flask
+app = Flask(__name__)
+
+# Función para cargar el secreto desde Google Secret Manager
+def load_secret(secret_name):
+    client = secretmanager.SecretManagerServiceClient()
+    secret = client.access_secret_version(request={"name": secret_name}).payload.data.decode("UTF-8")
+    return json.loads(secret)
+
+# Cargar configuraciones desde el secreto
+env = load_secret("projects/488709866434/secrets/simulador_secret")
+PROJECT_ID = env.get("PROJECT_ID")
+TOPIC_VIAJE = env.get("TOPIC_VIAJE")
+TOPIC_TELEMETRIA = env.get("TOPIC_TELEMETRIA")
 
 # Configuración de Pub/Sub
-PROJECT_ID = os.getenv("PROJECT_ID")
-TOPIC_VIAJE = os.getenv("TOPIC_VIAJE")
-TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA")
 publisher = pubsub_v1.PublisherClient()
-
-# Configurar credenciales de Google Cloud (descomentar si es necesario)
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-# Almacenamiento en memoria para viajes activos
 active_trips = {}
 
 # Configuración de logging
