@@ -253,10 +253,10 @@
                 <strong>Dominio:</strong> <span id="dominio">-</span>
             </div>
             <div class="info-item">
-                <strong>Origen:</strong> <span id="origen">Córdoba</span>
+                <strong>Origen:</strong> <span id="origen">-</span>
             </div>
             <div class="info-item">
-                <strong>Destino:</strong> <span id="destino">Rosario</span>
+                <strong>Destino:</strong> <span id="destino">-</span>
             </div>
             <div class="info-item">
                 <strong>Transportista:</strong> <span id="transportista">-</span>
@@ -292,7 +292,7 @@
         let routePoints = [];
         let currentTrip = null;
         let isTripActive = false;
-        let pollingInterval = null;
+        let telemetryCounter = 0;
         const MAX_TELEMETRY_EVENTS = 10;
 
         // Datos iniciales de viaje
@@ -330,10 +330,10 @@
         // Inicializar el mapa
         function initMap() {
             if (!map) {
-                // Coordenadas iniciales (Córdoba)
-                const initialPos = [-31.4135, -64.1810];
+                // Coordenadas iniciales (ajustadas a las que usas en la telemetría)
+                const initialPos = [47.4076, -8.5531];
                 
-                map = L.map('map').setView(initialPos, 10);
+                map = L.map('map').setView(initialPos, 15);
                 
                 // Añadir la capa de OpenStreetMap
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -367,7 +367,7 @@
         }
 
         // Actualizar la posición del vehículo y la ruta
-        function updateVehiclePosition(lat, lng, fitBounds = true) {
+        function updateVehiclePosition(lat, lng) {
             if (!map) initMap();
             
             const newPos = [parseFloat(lat), parseFloat(lng)];
@@ -382,152 +382,75 @@
             // Centrar el mapa en la nueva posición
             map.panTo(newPos);
             
-            // Zoom para ver toda la ruta si hay más de un punto y si se solicita
-            if (fitBounds && routePoints.length > 1) {
+            // Zoom para ver toda la ruta si hay más de un punto
+            if (routePoints.length > 1) {
                 map.fitBounds(routePath.getBounds(), {
                     padding: [50, 50], // Margen alrededor de la ruta
-                    maxZoom: 13        // Evitar zoom excesivo
+                    maxZoom: 15        // Evitar zoom excesivo
                 });
             }
             
             return newPos;
         }
 
-        // Iniciar el polling para obtener actualizaciones del estado del viaje
-        function startPolling(tripId) {
-            // Detener cualquier polling previo
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-            }
+        // Simular recepción de eventos de telemetría
+        function simulateTelemetryReceived(dominio) {
+            // Esta función simula la recepción de eventos de telemetría que normalmente
+            // vendría de un WebSocket o polling desde el backend
             
-            // Función para obtener el estado actual del viaje
-            const fetchTripStatus = () => {
-                fetch(`/trip_status/${tripId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Viaje no encontrado');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.status === 'active') {
-                            // Actualizar estado
-                            document.getElementById('estado').textContent = 'En progreso';
-                            
-                            // Obtener telemetría
-                            fetchTelemetry(tripId);
-                            
-                            // Si el viaje está completo, detener el polling
-                            if (data.trip_info.status === 'completed') {
-                                document.getElementById('estado').textContent = 'Completado';
-                                
-                                // Mostrar resumen de la ruta si está disponible
-                                if (data.trip_info.route_summary) {
-                                    const summary = data.trip_info.route_summary;
-                                    document.getElementById('origen').textContent = summary.origin;
-                                    document.getElementById('destino').textContent = summary.destination;
-                                    
-                                    // Mostrar mensaje de finalización
-                                    document.getElementById('telemetryData').textContent = 
-                                        `Telemetría completada. Distancia: ${summary.distance_km} km, ` +
-                                        `Duración: ${summary.duration.toFixed(1)} h, ` +
-                                        `Velocidad media: ${summary.avg_speed} km/h`;
-                                }
-                                
-                                // Detener el polling
-                                clearInterval(pollingInterval);
-                                
-                                // Habilitar botón de inicio para un nuevo viaje
-                                document.getElementById('startTripBtn').disabled = false;
-                            }
-                        } else {
-                            // El viaje ya no está activo
-                            document.getElementById('estado').textContent = 'Completado';
-                            document.getElementById('telemetryData').textContent = 'Telemetría finalizada';
-                            
-                            // Detener el polling
-                            clearInterval(pollingInterval);
-                            
-                            // Habilitar botón de inicio para un nuevo viaje
-                            document.getElementById('startTripBtn').disabled = false;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error al obtener estado del viaje:', error);
-                        document.getElementById('telemetryData').textContent = 'Error al obtener datos';
-                        
-                        // Detener el polling en caso de error
-                        clearInterval(pollingInterval);
-                        
-                        // Habilitar botón de inicio para un nuevo viaje
-                        document.getElementById('startTripBtn').disabled = false;
-                    });
-            };
+            // Crear un interval para simular eventos cada 5 segundos (10 en total)
+            const telemetryInterval = setInterval(() => {
+                // Generar datos de telemetría aleatorios
+                const telemetryData = {
+                    uuid: 'telemetry-' + Math.floor(Math.random() * 1000000),
+                    msgDateTime: new Date().toISOString(),
+                    deviceID: dominio,
+                    gps: {
+                        lat: (47.4076 + (Math.random() * 0.02) - 0.01).toFixed(6),
+                        long: (-8.5531 + (Math.random() * 0.02) - 0.01).toFixed(6)
+                    },
+                    eventos: [Math.floor(Math.random() * 100)]
+                };
+                
+                // Procesar el evento de telemetría
+                processTelemetryEvent(telemetryData);
+                
+                telemetryCounter++;
+                
+                // Detener después de 10 eventos
+                if (telemetryCounter >= 10) {
+                    clearInterval(telemetryInterval);
+                    
+                    // Actualizar estado cuando termina la simulación
+                    document.getElementById("telemetryData").textContent = "Simulación de telemetría completada.";
+                    document.getElementById("estado").textContent = "Completado";
+                    
+                    // Desactivar estado del viaje
+                    isTripActive = false;
+                    
+                    // Habilitar el botón para iniciar nuevo viaje
+                    document.getElementById("startTripBtn").disabled = false;
+                }
+            }, 5000); // Cada 5 segundos
             
-            // Obtener estado inmediatamente
-            fetchTripStatus();
-            
-            // Configurar intervalo de polling (cada 5 segundos)
-            pollingInterval = setInterval(fetchTripStatus, 5000);
-        }
-
-        // Obtener eventos de telemetría
-        function fetchTelemetry(tripId) {
-            fetch(`/telemetry/${tripId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Datos de telemetría no disponibles');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Verificar si hay nuevos eventos
-                        const events = data.telemetry;
-                        const currentCount = document.getElementById('telemetryEvents').children.length;
-                        
-                        if (events.length > currentCount) {
-                            // Hay nuevos eventos para mostrar
-                            document.getElementById('telemetryData').textContent = 
-                                `Recibiendo datos (${events.length} eventos)`;
-                            
-                            // Procesar solo los nuevos eventos (del más reciente al más antiguo)
-                            for (let i = events.length - 1; i >= currentCount; i--) {
-                                processTelemetryEvent(events[i]);
-                            }
-                            
-                            // Actualizar última actualización
-                            if (events.length > 0) {
-                                const lastEvent = events[events.length - 1];
-                                document.getElementById('ultimaActualizacion').textContent = 
-                                    new Date(lastEvent.timestamp).toLocaleString();
-                            }
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error al obtener telemetría:', error);
-                });
+            // Actualizar estado de telemetría
+            document.getElementById("telemetryData").textContent = "Recibiendo datos de telemetría...";
         }
 
         // Procesar un evento de telemetría
-        function processTelemetryEvent(event) {
+        function processTelemetryEvent(data) {
             // Actualizar posición en el mapa
-            const newPos = updateVehiclePosition(
-                event.position.lat, 
-                event.position.long, 
-                document.getElementById('telemetryEvents').children.length % 5 === 0 // Ajustar vista cada 5 eventos
-            );
+            const newPos = updateVehiclePosition(data.gps.lat, data.gps.long);
+            
+            // Actualizar información de última posición
+            document.getElementById("ultimaActualizacion").textContent = 
+                new Date(data.msgDateTime).toLocaleString();
             
             // Añadir evento a la lista
             addTelemetryEventToList({
-                time: new Date(event.timestamp).toLocaleTimeString(),
-                position: `${event.position.lat.toFixed(4)}, ${event.position.long.toFixed(4)}`,
-                speed: `${event.speed} km/h`,
-                location: event.location || '',
-                weather: event.weather || '',
-                traffic: event.traffic || '',
-                eventos: event.events.join(', ')
+                time: new Date(data.msgDateTime).toLocaleTimeString(),
+                position: `${data.gps.lat}, ${data.gps.long}`,
+                eventos: data.eventos.join(', ')
             });
         }
 
@@ -538,24 +461,11 @@
             // Crear elemento de lista para el nuevo evento
             const listItem = document.createElement("li");
             listItem.className = "telemetry-event";
-            
-            let eventHtml = `<strong>${event.time}</strong> - `;
-            eventHtml += `Posición: ${event.position} - `;
-            eventHtml += `Velocidad: ${event.speed}`;
-            
-            if (event.location) {
-                eventHtml += ` - ${event.location}`;
-            }
-            
-            if (event.weather || event.traffic) {
-                eventHtml += ` (${event.weather}${event.weather && event.traffic ? ', ' : ''}${event.traffic})`;
-            }
-            
-            if (event.eventos) {
-                eventHtml += ` - Eventos: ${event.eventos}`;
-            }
-            
-            listItem.innerHTML = eventHtml;
+            listItem.innerHTML = `
+                <strong>${event.time}</strong> - 
+                Posición: ${event.position} - 
+                Eventos: ${event.eventos}
+            `;
             
             // Añadir al principio de la lista
             eventsList.insertBefore(listItem, eventsList.firstChild);
@@ -592,12 +502,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(tripData)
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error al iniciar viaje');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 // Mostrar mensaje de éxito
                 document.getElementById("status").textContent = "Viaje iniciado con éxito.";
@@ -619,8 +524,8 @@
                 // Inicializar mapa si no existe
                 initMap();
                 
-                // Iniciar polling para recibir actualizaciones
-                startPolling(data.id_viaje);
+                // Simular la recepción de eventos de telemetría
+                simulateTelemetryReceived(data.dominio);
                 
                 // Completar la barra de progreso
                 progressBar.style.width = "100%";
@@ -647,6 +552,8 @@
         function updateTripInfo(data) {
             document.getElementById("tripId").textContent = data.id_viaje || "-";
             document.getElementById("dominio").textContent = data.dominio || "-";
+            document.getElementById("origen").textContent = tripData.idSucursalOrigen;
+            document.getElementById("destino").textContent = tripData.idSucursalDestino;
             document.getElementById("transportista").textContent = tripData.transportista;
             document.getElementById("precintos").textContent = tripData.precintos;
             document.getElementById("estado").textContent = "En progreso";
@@ -655,11 +562,8 @@
 
         // Reiniciar el estado del viaje
         function resetTripState() {
-            // Detener polling si existe
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-                pollingInterval = null;
-            }
+            // Reiniciar contador de telemetría
+            telemetryCounter = 0;
             
             // Limpiar puntos de ruta
             routePoints = [];
@@ -681,9 +585,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Asegurarse de que el contenedor de info esté oculto al inicio
             document.getElementById("tripInfoContainer").style.display = "none";
-            
-            // Inicializar el mapa para tenerlo listo
-            initMap();
         });
     </script>
 </body>
