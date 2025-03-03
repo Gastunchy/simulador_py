@@ -16,10 +16,7 @@ PROJECT_ID = os.getenv("PROJECT_ID", "")  # Valor por defecto si no está defini
 TOPIC_VIAJE = os.getenv("TOPIC_VIAJE", "")
 TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA", "")
 
-# Establecer la variable de entorno para el Service Account
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON_PATH")
-
-# Crear el cliente de Pub/Sub con el Service Account configurado
+# Crear el cliente de Pub/Sub sin la necesidad de la variable GOOGLE_APPLICATION_CREDENTIALS_JSON_PATH
 publisher = pubsub_v1.PublisherClient()
 
 # Almacenamiento en memoria para viajes activos
