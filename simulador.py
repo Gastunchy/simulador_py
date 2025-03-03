@@ -4,9 +4,10 @@ import uuid
 import time
 import threading
 from google.cloud import pubsub_v1
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import random
 import string
+import math
 
 app = Flask(__name__)
 
@@ -269,7 +270,7 @@ def simulate_telemetry(trip_id, dominio):
             # Añadir algo de aleatoriedad al tiempo
             time_seconds *= random.uniform(0.95, 1.05)
             # Actualizar tiempo actual
-            current_time = current_time + datetime.timedelta(seconds=time_seconds)
+            current_time = current_time + timedelta(seconds=time_seconds)
         
         # Crear mensaje de telemetría
         telemetry_message = {
@@ -314,8 +315,8 @@ def simulate_telemetry(trip_id, dominio):
             "origin": "Córdoba",
             "destination": "Rosario",
             "distance_km": 400,  # Aproximadamente 400km entre Córdoba y Rosario
-            "duration": (current_time - datetime.now(timezone.utc)).total_seconds() / 3600,  # Duración en horas
-            "avg_speed": round(400 / ((current_time - datetime.now(timezone.utc)).total_seconds() / 3600), 1)  # Velocidad promedio
+            "duration": (current_time - active_trips[trip_id]["start_time"]).total_seconds() / 3600,  # Duración en horas
+            "avg_speed": round(400 / ((current_time - active_trips[trip_id]["start_time"]).total_seconds() / 3600), 1)  # Velocidad promedio
         }
 
 if __name__ == "__main__":
