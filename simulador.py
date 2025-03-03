@@ -1,19 +1,18 @@
-from flask import Flask, render_template, request, jsonify
+import os
 import json
 import uuid
 import time
 import threading
-from google.cloud import pubsub_v1
-from datetime import datetime, timezone, timedelta
 import random
 import string
 import math
 import logging
-import os
+from datetime import datetime, timezone, timedelta
+from flask import Flask, render_template, request, jsonify
+from google.cloud import pubsub_v1
 from dotenv import load_dotenv
 
-app = Flask(__name__)
-
+# Cargar variables de entorno
 load_dotenv()
 
 # Configuración de Pub/Sub
@@ -22,14 +21,17 @@ TOPIC_VIAJE = os.getenv("TOPIC_VIAJE")
 TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA")
 publisher = pubsub_v1.PublisherClient()
 
-# Configurar credenciales de Google Cloud
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+# Configurar credenciales de Google Cloud (descomentar si es necesario)
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 # Almacenamiento en memoria para viajes activos
 active_trips = {}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
+
+# Inicializar la aplicación Flask
+app = Flask(__name__)
 
 def generate_random_domain(length=6):
     """Genera un dominio aleatorio de longitud especificada."""
