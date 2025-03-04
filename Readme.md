@@ -9,7 +9,6 @@ Esta aplicación es una simulación de viajes y telemetría utilizando Flask y G
 - Flask
 - dotenv
 - google-cloud-pubsub
-- google-cloud-secret-manager
 
 ## Instalación
 

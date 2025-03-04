@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, jsonify
 import uuid
 import time
 import threading
-from google.cloud import pubsub_v1, secretmanager
+from google.cloud import pubsub_v1
 from datetime import datetime, timezone
 import random
 import string
