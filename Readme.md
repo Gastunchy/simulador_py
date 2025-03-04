@@ -35,12 +35,10 @@ Esta aplicación es una simulación de viajes y telemetría utilizando Flask y G
 4. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
     ```env
-    PROJECT_ID=<ID_DEL_PROYECTO>
-    TOPIC_VIAJE=<TOPICO_DE_VIAJES>
-    TOPIC_TELEMETRIA=<TOPICO_DE_TELEMETRIA>
+    PROJECT_ID=<ID_DEL_PROYECTO_receptor_pubsub>
+    TOPIC_VIAJE=<TOPICO_DE_VIAJES_receptor_pubsub>
+    TOPIC_TELEMETRIA=<TOPICO_DE_TELEMETRIA_receptor_pubsub>
     GOOGLE_APPLICATION_CREDENTIALS=<RUTA_A_CREDENCIALES_JSON>
-    PORT=8080
-    FLASK_ENV=development
     ```
 
 ## Uso
@@ -52,76 +50,6 @@ Esta aplicación es una simulación de viajes y telemetría utilizando Flask y G
     ```
 
 2. Abre tu navegador y navega a `http://localhost:8080` para ver la página de inicio.
-
-## Endpoints
-
-### `GET /`
-
-Renderiza la página de inicio.
-
-### `POST /start_trip`
-
-Inicia un nuevo viaje y comienza a simular telemetría.
-
-- **Request Body**:
-    ```json
-    {
-        "tipoViaje": "tipo_de_viaje",
-        "idSucursalOrigen": "id_origen",
-        "idSucursalDestino": "id_destino",
-        "hr": "hora",
-        "transportista": "nombre_transportista",
-        "dominioSemi": "dominio_semi",
-        "precintos": "precintos"
-    }
-    ```
-
-- **Response**:
-    ```json
-    {
-        "status": "viaje iniciado",
-        "dominio": "dominio_aleatorio",
-        "id_viaje": "id_del_viaje"
-    }
-    ```
-
-### `GET /trip_status/<trip_id>`
-
-Consulta el estado de un viaje activo.
-
-- **Response**:
-    ```json
-    {
-        "status": "active",
-        "trip_info": {
-            "dominio": "dominio_aleatorio",
-            "start_time": "hora_de_inicio",
-            "telemetry_events": [],
-            "status": "active"
-        }
-    }
-    ```
-
-### `GET /telemetry/<trip_id>`
-
-Obtiene los eventos de telemetría de un viaje activo.
-
-- **Response**:
-    ```json
-    {
-        "status": "success",
-        "telemetry": [
-            {
-                "timestamp": "hora_del_evento",
-                "position": {
-                    "lat": "latitud",
-                    "long": "longitud"
-                },
-                "events": [evento]
-            }
-        ]
-    }
-    ```
 
 ## Funciones Principales
 
