@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 from flask import Flask, render_template, request, jsonify
 import json
@@ -8,6 +9,9 @@ from google.cloud import pubsub_v1
 from datetime import datetime, timezone
 import random
 import string
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
 
 app = Flask(__name__)
 
