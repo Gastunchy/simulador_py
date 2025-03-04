@@ -5,7 +5,6 @@ Esta aplicación es una simulación de viajes y telemetría utilizando Flask y G
 ## Requisitos
 
 - Python 3.7+
-- Google Cloud SDK
 - Flask
 - dotenv
 - google-cloud-pubsub
