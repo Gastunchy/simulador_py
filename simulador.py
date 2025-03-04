@@ -5,29 +5,19 @@ import uuid
 import time
 import threading
 from google.cloud import pubsub_v1
-from google.cloud import secretmanager
 from datetime import datetime, timezone
 import random
 import string
 
 app = Flask(__name__)
 
-# Función para cargar el secreto desde Google Secret Manager
-def load_secret(secret_name):
-    client = secretmanager.SecretManagerServiceClient()
-    secret = client.access_secret_version(request={"name": secret_name}).payload.data.decode("UTF-8")
-    return json.loads(secret)
-
-# Cargar configuraciones desde el secreto
-secret_name = "projects/488709866434/secrets/simulador_secret/versions/latest"
-secrets = load_secret(secret_name)
-
-# Usar los valores del secreto cargado
-PROJECT_ID = secrets.get("PROJECT_ID", "")
-TOPIC_VIAJE = secrets.get("TOPIC_VIAJE", "")
-TOPIC_TELEMETRIA = secrets.get("TOPIC_TELEMETRIA", "")
+# Configuración de Pub/Sub usando variables de entorno
+PROJECT_ID = os.getenv("PROJECT_ID", "")  # Valor por defecto si no está definida
+TOPIC_VIAJE = os.getenv("TOPIC_VIAJE", "")
+TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA", "")
 
 # Crear el cliente de Pub/Sub
+# Nota: Esto asume que las credenciales están configuradas en el entorno
 publisher = pubsub_v1.PublisherClient()
 
 # Almacenamiento en memoria para viajes activos
