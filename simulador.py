@@ -19,12 +19,13 @@ def load_secret(secret_name):
     return json.loads(secret)
 
 # Cargar configuraciones desde el secreto
-env = load_secret("projects/488709866434/secrets/simulador_secret/versions/latest")
+secret_name = "projects/488709866434/secrets/simulador_secret/versions/latest"
+secrets = load_secret(secret_name)
 
-# Ahora puedes acceder a las configuraciones cargadas desde el secreto
-PROJECT_ID = env.get("PROJECT_ID", "")
-TOPIC_VIAJE = env.get("TOPIC_VIAJE", "")
-TOPIC_TELEMETRIA = env.get("TOPIC_TELEMETRIA", "")
+# Usar los valores del secreto cargado
+PROJECT_ID = secrets.get("PROJECT_ID", "")
+TOPIC_VIAJE = secrets.get("TOPIC_VIAJE", "")
+TOPIC_TELEMETRIA = secrets.get("TOPIC_TELEMETRIA", "")
 
 # Crear el cliente de Pub/Sub
 publisher = pubsub_v1.PublisherClient()
