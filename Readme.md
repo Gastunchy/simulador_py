@@ -14,8 +14,9 @@ Esta aplicación es una simulación de viajes y telemetría utilizando Flask y G
 1. Clona el repositorio:
 
     ```bash
-    git clone <URL_DEL_REPOSITORIO>
-    cd <NOMBRE_DEL_REPOSITORIO>
+    git clone https://github.com/Gastunchy/simulador_py.git
+    cd simulador_py
+    git checkout Simulador_local
     ```
 
 2. Crea y activa un entorno virtual:
