@@ -10,36 +10,17 @@ from datetime import datetime, timezone
 import random
 import string
 
-# Función para acceder y cargar los secretos desde Google Secret Manager
-def load_secret(secret_name):
-    client = secretmanager.SecretManagerServiceClient()
-    response = client.access_secret_version(name=secret_name)
-    secret_data = response.payload.data.decode("UTF-8")
-    return json.loads(secret_data)
+# Cargar el archivo .env
+load_dotenv()
 
-# Cargar el secreto de credenciales de Google Cloud
-sa_secret_name = "projects/488709866434/secrets/SA_data/versions/latest"  # Reemplaza con el nombre de tu secreto
-sa_data = load_secret(sa_secret_name)
-
-# Guardar las credenciales de la cuenta de servicio en un archivo temporal
-with open("/tmp/google-credentials.json", "w") as f:
-    json.dump(sa_data, f)
+# Obtener las variables de entorno desde el archivo .env
+PROJECT_ID = os.getenv("PROJECT_ID")
+TOPIC_VIAJE = os.getenv("TOPIC_VIAJE")
+TOPIC_TELEMETRIA = os.getenv("TOPIC_TELEMETRIA")
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 # Establecer la variable de entorno para las credenciales de Google Cloud
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/google-credentials.json"
-
-# Cargar el secreto de configuración del proyecto
-project_config_secret_name = "projects/YOUR_PROJECT_ID/secrets/Project_config/versions/latest"  # Reemplaza con el nombre de tu secreto
-project_config = load_secret(project_config_secret_name)
-
-# Extraer las variables relacionadas con Pub/Sub desde el JSON
-PROJECT_ID = project_config.get("PROJECT_ID", "")
-TOPIC_VIAJE = project_config.get("TOPIC_VIAJE", "")
-TOPIC_TELEMETRIA = project_config.get("TOPIC_TELEMETRIA", "")
-
-# Extraer el puerto y el entorno de Flask
-PORT = int(project_config.get("PORT", 8080))
-FLASK_ENV = project_config.get("FLASK_ENV", "production")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
 
 # Inicialización de la aplicación Flask y cliente de Pub/Sub
 app = Flask(__name__)
@@ -155,5 +136,8 @@ def simulate_telemetry(trip_id, dominio):
         active_trips[trip_id]["end_time"] = datetime.now(timezone.utc).isoformat()
 
 if __name__ == "__main__":
+    # Puerto de Flask y entorno de ejecución
+    PORT = int(os.getenv("PORT", 8080))
+    FLASK_ENV = os.getenv("FLASK_ENV", "production")
     debug_mode = FLASK_ENV == "development"
     app.run(host="0.0.0.0", port=PORT, debug=debug_mode)
